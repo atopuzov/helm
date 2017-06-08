@@ -223,6 +223,33 @@ __handle_word()
     __handle_word
 }
 
+__custom_func() {
+    case ${last_command} in
+        helm_delete | helm_upgrade)
+            __helm_get_deployment
+            return
+            ;;
+        *)
+            ;;
+    esac
+}
+
+__helm_get_deployment() {
+    local template helm_out
+    if helm_out=$(helm list -q  2>/dev/null); then
+        COMPREPLY=( $( compgen -W "${helm_out[*]}" -- "$cur" ) )
+    fi
+}
+
+__kubectl_get_namespaces()
+{
+    local template kubectl_out
+    template="{{ range .items  }}{{ .metadata.name }} {{ end }}"
+    if kubectl_out=$(kubectl get -o template --template="${template}" namespace 2>/dev/null); then
+        COMPREPLY=( $( compgen -W "${kubectl_out[*]}" -- "$cur" ) )
+    fi
+}
+
 _helm_completion()
 {
     last_command="helm_completion"
@@ -821,7 +848,8 @@ _helm_install()
     flags+=("--name-template=")
     local_nonpersistent_flags+=("--name-template=")
     flags+=("--namespace=")
-    local_nonpersistent_flags+=("--namespace=")
+    flags_with_completion+=("--namespace")
+    flags_completion+=("__kubectl_get_namespaces")
     flags+=("--no-hooks")
     local_nonpersistent_flags+=("--no-hooks")
     flags+=("--replace")
@@ -914,7 +942,8 @@ _helm_list()
     two_word_flags+=("-m")
     local_nonpersistent_flags+=("--max=")
     flags+=("--namespace=")
-    local_nonpersistent_flags+=("--namespace=")
+    flags_with_completion+=("--namespace")
+    flags_completion+=("__kubectl_get_namespaces")
     flags+=("--offset=")
     two_word_flags+=("-o")
     local_nonpersistent_flags+=("--offset=")
@@ -1485,7 +1514,8 @@ _helm_upgrade()
     flags+=("--keyring=")
     local_nonpersistent_flags+=("--keyring=")
     flags+=("--namespace=")
-    local_nonpersistent_flags+=("--namespace=")
+    flags_with_completion+=("--namespace")
+    flags_completion+=("__kubectl_get_namespaces")
     flags+=("--no-hooks")
     local_nonpersistent_flags+=("--no-hooks")
     flags+=("--recreate-pods")
